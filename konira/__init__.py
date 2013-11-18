@@ -11,7 +11,7 @@ from konira.argopts   import ArgOpts
 from konira.output    import ReportResults
 import konira.tools
 
-__version__ = '0.3.2'
+__version__ = '0.3.5'
 
 class KoniraCommands(object):
 
@@ -33,7 +33,9 @@ Control Options:
     -d, dots            Displays '.' for passing and 'F' for failed tests.
     -p, profile         Enables profiling displaying the 10 slowest tests
                         forces dotted output.
-    --debug             Doesn't remove internal tracebacks
+    --debug             Don't remove internal tracebacks
+    --pdb               Drop to PDB on unexpected exceptions
+    --pdb-failure       Drop to PDB on assertion failures
 
 Collection options:
     --collect-match     Provide a regex to match files for collection and avoiding
@@ -125,7 +127,7 @@ Matching Options:
 
 
     def parseArgs(self, argv):
-        options = ['no-capture', '-s', 'fail', '-x', '-t', '-d', '--debug',
+        options = ['no-capture', '-s', 'fail', '-x', '-t', '-d', '--debug', '--pdb',
                    'dots', 'traceback', 'tracebacks', 'describe', 'it',
                    '--collect-match', '--collect-ci']
         coverage_options  = ['--show-missing', '--cover-dir', '--cover-report',
@@ -203,6 +205,14 @@ Matching Options:
             # Debugging option
             if args.has(['--debug']):
                 self.config['debug'] = True
+
+            # PDB option
+            if args.has(['--pdb']):
+                self.config['pdb'] = True
+
+            # PDB on failure option
+            if args.has(['--pdb-failure']):
+                self.config['pdb_on_fail'] = True
 
             # Coverage options
             if args.has('cover'):

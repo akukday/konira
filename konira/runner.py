@@ -1,9 +1,10 @@
 import re
 import inspect
 import sys
+import types
 from decimal          import Decimal
 from konira.exc       import KoniraFirstFail, KoniraNoSkip
-from konira.util      import StopWatch, get_class_name, get_let_attrs, set_let_attrs
+from konira.util      import StopWatch, get_class_name, get_let_attrs, set_let_attrs, pdb_post_postmortem
 from konira.collector import globals_from_file
 from konira.output    import TerminalWriter
 
@@ -98,6 +99,13 @@ class Runner(object):
                         exc_name = e.__class__.__name__
                        )
                     )
+
+                is_assert_error = isinstance(e, AssertionError)
+                if is_assert_error and self.config.get('pdb_on_fail'):
+                    pdb_post_postmortem()
+                elif not is_assert_error and self.config.get('pdb'):
+                    pdb_post_postmortem()
+
                 if self.config.get('first_fail'):
                     raise KoniraFirstFail
 
@@ -230,16 +238,21 @@ def get_methods(suite, method_name):
     return methods
 
 
-
 def _collect_classes(path):
     global_modules = map(globals_from_file, [path])
-    return [i for i in global_modules[0].values() if callable(i) and i.__name__.startswith('Case_')]
-
+    has_case_class_name = lambda s: s.__name__.startswith('Case_')
+    is_a_class = lambda s: isinstance(s, (types.ClassType, types.TypeType))
+    is_a_case_class = lambda s: is_a_class(s) and has_case_class_name(s)
+    return filter(is_a_case_class, global_modules[0].values())
 
 
 def _collect_methods(module):
     valid_method_name = re.compile(r'it_[_a-z]\w*$', re.IGNORECASE)
-    return [i for i in dir(module) if valid_method_name.match(i)]
+    lineno = lambda s: getattr(module, s).im_func.func_code.co_firstlineno
+    methods = [i for i in dir(module) if valid_method_name.match(i)]
+    methods.sort(key=lineno)
+    return methods
+
 
 
 
